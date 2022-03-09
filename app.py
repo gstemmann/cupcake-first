@@ -15,29 +15,28 @@ connect_db(app)
 db.create_all()
 
 
-def serialize_cupcakes(cupcake):
-    """Serialize a dessert SQLAlchemy obj to dictionary."""
 
-    return {
-        "id": cupcake.id,
-        "name": cupcake.name,
-        "calories": cupcake.calories,
-    }
+@app.route('/api/cupcakes')
+def list_cupcakes():
+    all_cupcakes = [cupcake.serialize() for cupcake in  Cupcake.query.all()]
+    return jsonify(all_cupcakes)
 
-@app.route("/cupcakes")
-def list_all_cupcakes():
-    """Return JSON {'desserts': [{id, name, calories}, ...]}"""
+@app.route('/api/cupcakes/<int:id>')
+def get_cupcake(id):
+    cupcake = Cupcake.query.get_or_404(id)
+    return jsonify(cupcake=cupcake.serialize())
 
-    cupcakes = Cupcake.query.all()
-    serialized = [serialize_cupcakes(d) for d in cupcakes]
+@app.route('/api/cupcakes', methods=['POST'])
+def create_cupcake():
+    # new_cupcake = Cupcake(flavor=request.json['flavor'])
+    data = request.json
 
-    return jsonify(cupcakes=serialized)
-
-@app.route('/api/cupcakes/<id>')
-def list_cupcake(id):
-    """Return JSON {'dessert': {id, name, calories}}"""
-
-    cupcake = Cupcake.query.get(id)
-    serialized = serialize_cupcakes(cupcake)
-
-    return jsonify(cupcake=serialized)
+    new_cupcake = Cupcake(
+        flavor=data['flavor'],
+        rating=data['rating'],
+        size=data['size'],
+        image=data['image'] or None)
+    db.session.add(new_cupcake)
+    db.session.commit()
+    response_json = jsonify(cupcake=new_cupcake.to_dict())
+    return (response_json, 201)
